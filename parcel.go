@@ -27,7 +27,6 @@ func (s ParcelStore) Add(p Parcel) (int, error) {
 	// верните идентификатор последней добавленной записи
 	id, err := res.LastInsertId()
 	if err != nil {
-		fmt.Println(err)
 		return 0, err
 	}
 	return int(id), nil
@@ -41,7 +40,6 @@ func (s ParcelStore) Get(number int) (Parcel, error) {
 	// заполните объект Parcel данными из таблицы
 	p := Parcel{}
 	if err := row.Scan(&p.Number, &p.Client, &p.Status, &p.Address, &p.CreatedAt); err != nil {
-		fmt.Println(err)
 		return Parcel{}, err
 	}
 	return p, nil
@@ -68,6 +66,9 @@ func (s ParcelStore) GetByClient(client int) ([]Parcel, error) {
 		}
 		res = append(res, parcel)
 	}
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
 	return res, nil
 }
 
@@ -86,13 +87,10 @@ func (s ParcelStore) SetStatus(number int, status string) error {
 func (s ParcelStore) SetAddress(number int, address string) error {
 	// реализуйте обновление адреса в таблице parcel
 	// менять адрес можно только если значение статуса registered
-	_, err := s.Get(number)
-	if err != nil {
-		return err
-	}
-	_, err = s.db.Exec("UPDATE parcel SET address = :address WHERE number = :number",
+	_, err := s.db.Exec("UPDATE parcel SET address = :address WHERE number = :number AND status = :status",
 		sql.Named("address", address),
-		sql.Named("number", number))
+		sql.Named("number", number),
+		sql.Named("status", ParcelStatusRegistered))
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -103,12 +101,9 @@ func (s ParcelStore) SetAddress(number int, address string) error {
 func (s ParcelStore) Delete(number int) error {
 	// реализуйте удаление строки из таблицы parcel
 	// удалять строку можно только если значение статуса registered
-	_, err := s.Get(number)
-	if err != nil {
-		return err
-	}
-	_, err = s.db.Exec("DELETE FROM parcel WHERE number = :number",
-		sql.Named("number", number))
+	_, err := s.db.Exec("DELETE FROM parcel WHERE number = :number AND status = :status",
+		sql.Named("number", number),
+		sql.Named("status", ParcelStatusRegistered))
 	if err != nil {
 		fmt.Println(err)
 		return err
